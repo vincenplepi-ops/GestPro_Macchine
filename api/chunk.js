@@ -8,6 +8,8 @@ const NEW_ANALYZE = "async function ki(e,t,n,r){let i=gi(t),a=si.get(e);if(!a){l
 const SAVE_OLD = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0&&(n[t]={...n[t],inStock:e.inStock,completed:e.installed})}else";
 const SAVE_NEW = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0?n[t]={...n[t],label:e.label||n[t].label,inStock:e.inStock,completed:e.installed}:n.push({id:e.key,label:e.label||`Lavoro fuori standard`,inStock:e.inStock,completed:e.installed})}else";
 
+const VP_WALLPAPER_RUNTIME = `;(()=>{try{const id='vp-software-wallpaper-v3';if(!document.getElementById(id)){const s=document.createElement('style');s.id=id;s.textContent="html,body{min-height:100%;background:#061735 url('/api/wallpaper?v=3') center top/cover no-repeat fixed!important}body{background-color:#061735!important}.app-shell{background:linear-gradient(180deg,rgba(6,23,53,.22),rgba(5,18,35,.40)),url('/api/wallpaper?v=3') center top/cover no-repeat!important}.login-page,.home-page,.detail-page{background:transparent!important}.login-card,.machine-card,.scan-analysis,.verify-card,.section-card{background-color:rgba(8,24,43,.78)!important;backdrop-filter:blur(2px) saturate(115%);-webkit-backdrop-filter:blur(2px) saturate(115%)}@media(max-width:720px){html,body,.app-shell{background-attachment:scroll!important;background-position:center top!important}}";(document.head||document.documentElement).appendChild(s)}}catch(e){}})();`;
+
 module.exports = async function handler(req, res) {
   try {
     const upstream = await fetch(`${ORIGIN}${CHUNK}`, { headers: { 'user-agent': 'GestPro-Vercel-Scanner-Proxy/1.1' } });
@@ -24,7 +26,7 @@ module.exports = async function handler(req, res) {
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
     res.setHeader('X-GestPro-Scanner', 'v4-id-robust-auto-extra-rows');
-    return res.status(200).send(js);
+    return res.status(200).send(js + VP_WALLPAPER_RUNTIME);
   } catch (error) {
     return res.status(500).send(`GestPro scanner proxy error: ${error?.message || error}`);
   }
