@@ -19,6 +19,8 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 
 import androidx.core.content.FileProvider;
 
@@ -38,6 +40,7 @@ public class MainActivity extends Activity {
     private Uri cameraImageUri;
     private WebChromeClient.FileChooserParams pendingFileChooserParams;
     private PermissionRequest pendingWebPermissionRequest;
+    private OnBackInvokedCallback backInvokedCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,11 +55,22 @@ public class MainActivity extends Activity {
         setContentView(webView);
 
         configureWebView();
+        configureAndroidBackButton();
 
         if (savedInstanceState == null) {
             webView.loadUrl(APP_URL);
         } else {
             webView.restoreState(savedInstanceState);
+        }
+    }
+
+    private void configureAndroidBackButton() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            backInvokedCallback = this::handleBackNavigation;
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                    backInvokedCallback
+            );
         }
     }
 
@@ -94,6 +108,12 @@ public class MainActivity extends Activity {
             @SuppressWarnings("deprecation")
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 return handleExternalScheme(Uri.parse(url));
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                installWebBackArrowFix();
             }
         });
 
@@ -139,6 +159,43 @@ public class MainActivity extends Activity {
                 });
             }
         });
+    }
+
+    /**
+     * GestPro is a single-page application. On Android WebView the browser history can be
+     * empty even while a machine detail is open. This Android-only listener makes the
+     * top-left GestPro back arrow deterministic: from a machine page it returns to Home.
+     * The website itself and the scanner code are not changed.
+     */
+    private void installWebBackArrowFix() {
+        if (webView == null) {
+            return;
+        }
+
+        String js = "(function(){"
+                + "if(window.__gestproAndroidBackFix)return;"
+                + "window.__gestproAndroidBackFix=true;"
+                + "function isMachinePage(){"
+                + "var t=(document.body&&document.body.innerText)||'';"
+                + "return /Scansiona checklist/i.test(t)&&/MACCHINA\\s*\\d+/i.test(t);"
+                + "}"
+                + "document.addEventListener('click',function(e){"
+                + "try{"
+                + "if(!isMachinePage())return;"
+                + "var el=e.target&&e.target.closest?e.target.closest('button,a,[role=button]'):e.target;"
+                + "if(!el||!el.getBoundingClientRect)return;"
+                + "var r=el.getBoundingClientRect();"
+                + "var x=r.left+(r.width/2), y=r.top+(r.height/2);"
+                + "if(x<130&&y<150){"
+                + "e.preventDefault();e.stopPropagation();"
+                + "if(e.stopImmediatePropagation)e.stopImmediatePropagation();"
+                + "window.location.replace('" + APP_URL + "');"
+                + "}"
+                + "}catch(err){}"
+                + "},true);"
+                + "})();";
+
+        webView.evaluateJavascript(js, null);
     }
 
     private boolean handleExternalScheme(Uri uri) {
@@ -275,18 +332,41 @@ public class MainActivity extends Activity {
         super.onSaveInstanceState(outState);
     }
 
+    private void handleBackNavigation() {
+        if (webView == null) {
+            finish();
+            return;
+        }
+
+        // Detect a machine-detail page from the rendered GestPro UI. If present, always
+        // return to the root Home page instead of relying on WebView history.
+        String script = "(function(){var t=(document.body&&document.body.innerText)||'';"
+                + "return (/Scansiona checklist/i.test(t)&&/MACCHINA\\s*\\d+/i.test(t))?'machine':'other';})()";
+
+        webView.evaluateJavascript(script, value -> {
+            if (value != null && value.contains("machine")) {
+                webView.loadUrl(APP_URL);
+            } else if (webView.canGoBack()) {
+                webView.goBack();
+            } else {
+                finish();
+            }
+        });
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
-        }
+        handleBackNavigation();
     }
 
     @Override
     protected void onDestroy() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && backInvokedCallback != null) {
+            getOnBackInvokedDispatcher().unregisterOnBackInvokedCallback(backInvokedCallback);
+            backInvokedCallback = null;
+        }
+
         if (webView != null) {
             webView.stopLoading();
             webView.setWebChromeClient(null);
