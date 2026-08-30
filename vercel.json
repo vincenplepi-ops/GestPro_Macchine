@@ -6,6 +6,10 @@
       "dest": "/api/chunk"
     },
     {
+      "src": "/_next/static/css/index\\.C0m4IbVE\\.css",
+      "dest": "/api/css"
+    },
+    {
       "handle": "filesystem"
     },
     {
