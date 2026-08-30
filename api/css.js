@@ -4,27 +4,59 @@ const WALLPAPER_CSS = `
 /* VP Software wallpaper - GestPro Mobile */
 html, body {
   min-height: 100%;
-  background: #061735 url('/api/wallpaper') center center / cover no-repeat fixed !important;
+  background-color: #031027 !important;
+  background-image: url('/api/wallpaper') !important;
+  background-position: center center !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
 }
 body {
   position: relative;
 }
-.app-shell {
-  background: linear-gradient(180deg, rgba(6, 23, 53, .76), rgba(5, 18, 35, .84)), url('/api/wallpaper') center center / cover no-repeat fixed !important;
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(2, 11, 28, .18);
+  z-index: 0;
 }
-.login-page {
-  background: linear-gradient(180deg, rgba(4, 16, 38, .42), rgba(4, 16, 38, .62)), url('/api/wallpaper') center center / cover no-repeat fixed !important;
+.app-shell {
+  position: relative;
+  z-index: 1;
+  background: rgba(4, 19, 39, .38) !important;
+  backdrop-filter: blur(1px) saturate(115%);
+  -webkit-backdrop-filter: blur(1px) saturate(115%);
+}
+.login-page,
+.detail-page,
+.home-page {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
 }
 .login-card,
 .scan-analysis,
-.verify-card {
-  backdrop-filter: blur(2px) saturate(120%);
-  -webkit-backdrop-filter: blur(2px) saturate(120%);
+.verify-card,
+.scan-preview,
+.extra-card,
+.machine-card,
+.status-card,
+.capture-card,
+.section-card,
+header {
+  background-color: rgba(6, 27, 50, .76) !important;
+  backdrop-filter: blur(5px) saturate(120%);
+  -webkit-backdrop-filter: blur(5px) saturate(120%);
 }
 @media (max-width: 720px) {
-  html, body, .app-shell, .login-page {
+  html, body {
     background-attachment: scroll !important;
     background-position: center top !important;
+  }
+  .app-shell {
+    background: rgba(4, 19, 39, .32) !important;
   }
 }
 `;
@@ -39,10 +71,12 @@ export default async function handler(req, res) {
     }
     const css = await upstream.text();
     res.setHeader('Content-Type', 'text/css; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, must-revalidate');
+    res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    res.setHeader('X-GestPro-Wallpaper', 'vp-visible-v2');
     res.status(200).send(css + '\n' + WALLPAPER_CSS);
   } catch (error) {
     res.setHeader('Content-Type', 'text/css; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
     res.status(200).send(WALLPAPER_CSS);
   }
 }
