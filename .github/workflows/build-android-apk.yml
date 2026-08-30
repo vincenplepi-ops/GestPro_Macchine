@@ -94,3 +94,18 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "GestPro Macchine Android v${VERSION}" \
             --notes "Aggiornamento Android GestPro Macchine Mobile."
+
+      - name: Keep web channel as latest release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/android-apk'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="gestpro-web-live"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release delete "$TAG" --yes --cleanup-tag
+          fi
+          gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "GestPro Web Live" \
+            --notes "Canale web attivo. Gli aggiornamenti di interfaccia, wallpaper e scanner sono distribuiti direttamente da Vercel e non richiedono la sostituzione dell'APK Android."
