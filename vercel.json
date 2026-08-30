@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "routes": [
     {
+      "src": "/api/wallpaper",
+      "dest": "/api/wallpaper-cjs"
+    },
+    {
       "src": "/_next/static/chunks/page-BC2UGiUq\\.js",
       "dest": "/api/chunk"
     },
