@@ -40,11 +40,28 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Restore stable Android test signing key
+      - name: Restore stable Android signing key
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
           key: gestpro-android-debug-keystore-v1
+
+      - name: Ensure stable Android signing key exists
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$HOME/.android/debug.keystore" ]; then
+            keytool -genkeypair -v \
+              -keystore "$HOME/.android/debug.keystore" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=GestPro Android, OU=VP Software, O=VP Software, L=Prato, ST=Toscana, C=IT"
+          fi
+          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey >/dev/null
 
       - name: Read Android version
         id: app_version
