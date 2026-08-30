@@ -2,6 +2,7 @@ package com.vpsoftware.gestpromacchine;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -10,6 +11,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.PermissionRequest;
@@ -24,16 +26,30 @@ import android.window.OnBackInvokedDispatcher;
 
 import androidx.core.content.FileProvider;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
 public class MainActivity extends Activity {
     private static final String APP_URL = "https://gestpro-macchine-mobile.vercel.app";
+    private static final String RELEASE_API = "https://api.github.com/repos/vincenplepi-ops/GestPro_Macchine/releases/latest";
+    private static final String UPDATE_ASSET_NAME = "GestPro-Macchine-Mobile-Android.apk";
+
     private static final int FILE_CHOOSER_REQUEST = 4101;
     private static final int CAMERA_PERMISSION_REQUEST = 4102;
+    private static final int INSTALL_UNKNOWN_APPS_REQUEST = 4103;
 
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
@@ -41,6 +57,8 @@ public class MainActivity extends Activity {
     private WebChromeClient.FileChooserParams pendingFileChooserParams;
     private PermissionRequest pendingWebPermissionRequest;
     private OnBackInvokedCallback backInvokedCallback;
+    private File pendingUpdateApk;
+    private boolean updateCheckStarted = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,6 +80,8 @@ public class MainActivity extends Activity {
         } else {
             webView.restoreState(savedInstanceState);
         }
+
+        webView.postDelayed(this::checkForAppUpdate, 2500);
     }
 
     private void configureAndroidBackButton() {
@@ -88,7 +108,7 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        settings.setUserAgentString(settings.getUserAgentString() + " GestProAndroid/1.0");
+        settings.setUserAgentString(settings.getUserAgentString() + " GestProAndroid/" + BuildConfig.VERSION_NAME);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
@@ -161,12 +181,6 @@ public class MainActivity extends Activity {
         });
     }
 
-    /**
-     * GestPro is a single-page application. On Android WebView the browser history can be
-     * empty even while a machine detail is open. This Android-only listener makes the
-     * top-left GestPro back arrow deterministic: from a machine page it returns to Home.
-     * The website itself and the scanner code are not changed.
-     */
     private void installWebBackArrowFix() {
         if (webView == null) {
             return;
@@ -275,9 +289,217 @@ public class MainActivity extends Activity {
         pendingFileChooserParams = null;
     }
 
+    private void checkForAppUpdate() {
+        if (updateCheckStarted) {
+            return;
+        }
+        updateCheckStarted = true;
+
+        new Thread(() -> {
+            HttpURLConnection connection = null;
+            try {
+                connection = (HttpURLConnection) new URL(RELEASE_API).openConnection();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(10000);
+                connection.setRequestProperty("Accept", "application/vnd.github+json");
+                connection.setRequestProperty("User-Agent", "GestPro-Android-Updater");
+
+                if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    return;
+                }
+
+                String body = readText(connection.getInputStream());
+                JSONObject release = new JSONObject(body);
+                if (release.optBoolean("draft", false) || release.optBoolean("prerelease", false)) {
+                    return;
+                }
+
+                String tag = release.optString("tag_name", "");
+                if (!tag.startsWith("android-v")) {
+                    return;
+                }
+
+                String latestVersion = tag.substring("android-v".length());
+                String currentVersion = BuildConfig.VERSION_NAME.split("-")[0];
+                if (compareVersions(latestVersion, currentVersion) <= 0) {
+                    return;
+                }
+
+                String downloadUrl = null;
+                JSONArray assets = release.optJSONArray("assets");
+                if (assets != null) {
+                    for (int i = 0; i < assets.length(); i++) {
+                        JSONObject asset = assets.optJSONObject(i);
+                        if (asset != null && UPDATE_ASSET_NAME.equals(asset.optString("name"))) {
+                            downloadUrl = asset.optString("browser_download_url", null);
+                            break;
+                        }
+                    }
+                }
+
+                if (downloadUrl == null || downloadUrl.isEmpty()) {
+                    return;
+                }
+
+                File apk = downloadUpdate(downloadUrl, latestVersion);
+                if (apk != null && apk.exists()) {
+                    pendingUpdateApk = apk;
+                    runOnUiThread(() -> showInstallUpdateDialog(latestVersion, apk));
+                }
+            } catch (Exception ignored) {
+                // Update failures must never block GestPro.
+            } finally {
+                if (connection != null) {
+                    connection.disconnect();
+                }
+            }
+        }).start();
+    }
+
+    private File downloadUpdate(String downloadUrl, String version) {
+        HttpURLConnection connection = null;
+        try {
+            File baseDir = getExternalCacheDir() != null ? getExternalCacheDir() : getCacheDir();
+            File updateDir = new File(baseDir, "updates");
+            if (!updateDir.exists() && !updateDir.mkdirs()) {
+                return null;
+            }
+
+            File apk = new File(updateDir, "GestPro-Macchine-Mobile-Android-" + version + ".apk");
+            if (apk.exists() && !apk.delete()) {
+                return null;
+            }
+
+            connection = (HttpURLConnection) new URL(downloadUrl).openConnection();
+            connection.setInstanceFollowRedirects(true);
+            connection.setConnectTimeout(15000);
+            connection.setReadTimeout(30000);
+            connection.setRequestProperty("User-Agent", "GestPro-Android-Updater");
+            connection.connect();
+
+            int code = connection.getResponseCode();
+            if (code < 200 || code >= 300) {
+                return null;
+            }
+
+            try (InputStream input = new BufferedInputStream(connection.getInputStream());
+                 FileOutputStream output = new FileOutputStream(apk)) {
+                byte[] buffer = new byte[8192];
+                int count;
+                while ((count = input.read(buffer)) != -1) {
+                    output.write(buffer, 0, count);
+                }
+                output.flush();
+            }
+
+            return apk.length() > 0 ? apk : null;
+        } catch (Exception ignored) {
+            return null;
+        } finally {
+            if (connection != null) {
+                connection.disconnect();
+            }
+        }
+    }
+
+    private String readText(InputStream inputStream) throws IOException {
+        StringBuilder result = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                result.append(line);
+            }
+        }
+        return result.toString();
+    }
+
+    private int compareVersions(String a, String b) {
+        String[] aa = a.split("\\.");
+        String[] bb = b.split("\\.");
+        int length = Math.max(aa.length, bb.length);
+        for (int i = 0; i < length; i++) {
+            int av = i < aa.length ? parseVersionPart(aa[i]) : 0;
+            int bv = i < bb.length ? parseVersionPart(bb[i]) : 0;
+            if (av != bv) {
+                return Integer.compare(av, bv);
+            }
+        }
+        return 0;
+    }
+
+    private int parseVersionPart(String value) {
+        try {
+            String digits = value.replaceAll("[^0-9]", "");
+            return digits.isEmpty() ? 0 : Integer.parseInt(digits);
+        } catch (Exception ignored) {
+            return 0;
+        }
+    }
+
+    private void showInstallUpdateDialog(String version, File apk) {
+        if (isFinishing()) {
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Aggiornamento GestPro")
+                .setMessage("La nuova versione " + version + " è stata scaricata automaticamente. Premi Installa per aggiornare l'app.")
+                .setCancelable(true)
+                .setNegativeButton("Più tardi", null)
+                .setPositiveButton("Installa", (dialog, which) -> installDownloadedUpdate(apk))
+                .show();
+    }
+
+    private void installDownloadedUpdate(File apk) {
+        if (apk == null || !apk.exists()) {
+            return;
+        }
+
+        pendingUpdateApk = apk;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && !getPackageManager().canRequestPackageInstalls()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Consenti aggiornamenti GestPro")
+                    .setMessage("Per aggiornare l'APK, Android deve autorizzare GestPro a installare questa nuova versione. Abilita 'Consenti da questa origine' e torna indietro.")
+                    .setNegativeButton("Annulla", null)
+                    .setPositiveButton("Apri impostazioni", (dialog, which) -> {
+                        Intent settingsIntent = new Intent(
+                                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                Uri.parse("package:" + getPackageName())
+                        );
+                        startActivityForResult(settingsIntent, INSTALL_UNKNOWN_APPS_REQUEST);
+                    })
+                    .show();
+            return;
+        }
+
+        Uri apkUri = FileProvider.getUriForFile(
+                this,
+                getPackageName() + ".fileprovider",
+                apk
+        );
+
+        Intent installIntent = new Intent(Intent.ACTION_VIEW);
+        installIntent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+        installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(installIntent);
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == INSTALL_UNKNOWN_APPS_REQUEST) {
+            if (pendingUpdateApk != null
+                    && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O
+                    || getPackageManager().canRequestPackageInstalls())) {
+                installDownloadedUpdate(pendingUpdateApk);
+            }
+            return;
+        }
+
         if (requestCode != FILE_CHOOSER_REQUEST) {
             return;
         }
@@ -338,8 +560,6 @@ public class MainActivity extends Activity {
             return;
         }
 
-        // Detect a machine-detail page from the rendered GestPro UI. If present, always
-        // return to the root Home page instead of relying on WebView history.
         String script = "(function(){var t=(document.body&&document.body.innerText)||'';"
                 + "return (/Scansiona checklist/i.test(t)&&/MACCHINA\\s*\\d+/i.test(t))?'machine':'other';})()";
 
