@@ -94,6 +94,19 @@ public class MainActivity extends Activity {
         }
     }
 
+    private String getCurrentVersionName() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                return getPackageManager()
+                        .getPackageInfo(getPackageName(), PackageManager.PackageInfoFlags.of(0))
+                        .versionName;
+            }
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Exception ignored) {
+            return "0.0.0";
+        }
+    }
+
     private void configureWebView() {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -108,7 +121,7 @@ public class MainActivity extends Activity {
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        settings.setUserAgentString(settings.getUserAgentString() + " GestProAndroid/" + BuildConfig.VERSION_NAME);
+        settings.setUserAgentString(settings.getUserAgentString() + " GestProAndroid/" + getCurrentVersionName());
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
@@ -321,7 +334,7 @@ public class MainActivity extends Activity {
                 }
 
                 String latestVersion = tag.substring("android-v".length());
-                String currentVersion = BuildConfig.VERSION_NAME.split("-")[0];
+                String currentVersion = getCurrentVersionName().split("-")[0];
                 if (compareVersions(latestVersion, currentVersion) <= 0) {
                     return;
                 }
