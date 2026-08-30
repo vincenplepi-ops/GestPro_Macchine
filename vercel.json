@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "routes": [
+    {
+      "src": "/_next/static/chunks/page-BC2UGiUq\\.js",
+      "dest": "/api/chunk"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "https://gestpro-macchine-mobile.plepivincens.chatgpt.site/$1"
+    }
+  ]
+}
