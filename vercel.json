@@ -6,6 +6,10 @@
       "dest": "/api/chunk?chunk=page-$1.js"
     },
     {
+      "src": "/_next/static/chunks/scanner-client-(.*)\\.js",
+      "dest": "/api/chunk?chunk=scanner-client-$1.js"
+    },
+    {
       "handle": "filesystem"
     },
     {

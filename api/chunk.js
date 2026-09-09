@@ -21,13 +21,20 @@ const SAVE_NEW = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0?n[t]=
 module.exports = async function handler(req, res) {
   try {
     const requested = String(req.query?.chunk || '').trim();
-    const chunk = /^page-[A-Za-z0-9_-]+\.js$/.test(requested)
+    const chunk = /^(?:page|scanner-client)-[A-Za-z0-9_-]+\.js$/.test(requested)
       ? `/_next/static/chunks/${requested}`
       : FALLBACK_CHUNK;
     const upstream = await fetch(`${ORIGIN}${chunk}`, { headers: { 'user-agent': 'GestPro-Vercel-Scanner-Proxy/1.2' } });
     if (!upstream.ok) return res.status(upstream.status).send(`Upstream chunk error: ${upstream.status}`);
     let js = await upstream.text();
     const original = js;
+    const containsScanner = /async function Si\(e,t\)/.test(js) && /function Oi\(e,t,n\)/.test(js);
+    if (!containsScanner) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      res.setHeader('Cache-Control', 'no-store, max-age=0');
+      res.setHeader('X-GestPro-Scanner', 'v10-browser-loader');
+      return res.status(200).send(js);
+    }
     js = js.replace(/async function Si\(e,t\)\{[\s\S]*?(?=function Ci\()/, NEW_ID_SCANNER);
     js = js.replace(/function Oi\(e,t,n\)\{[\s\S]*?(?=async function ki\()/, COLOR_CHECKBOX_SCANNER + SAFE_EXTRA_OCR);
     js = js.replace(/async function ki\(e,t,n,r\)\{[\s\S]*?(?=var Ai=)/, NO_AUTO_EXTRAS_ANALYZE);
@@ -37,7 +44,7 @@ module.exports = async function handler(req, res) {
     }
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.setHeader('X-GestPro-Scanner', 'v9-no-invented-extras');
+    res.setHeader('X-GestPro-Scanner', 'v10-browser-loader');
     return res.status(200).send(js);
   } catch (error) {
     return res.status(500).send(`GestPro scanner proxy error: ${error?.message || error}`);
