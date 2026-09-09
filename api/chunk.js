@@ -6,7 +6,14 @@ const NEW_CHECKBOX_SCANNER = "function Oi(e,t,n){let r=e.getContext(`2d`,{willRe
 const EXTRA_OCR = "async function VPextraOCR(e,t,n,r){if(!n)return[];r(90,`Lettura lavori fuori standard`);let i=.239+t*.0231+.046,a=.0231,o=await(0,oi.createWorker)(`eng`,1,{logger:()=>{}}),s=[];try{await o.setParameters({tessedit_pageseg_mode:`7`,preserve_interword_spaces:`1`});for(let t=0;t<n;t++){let n=(i+t*a)*e.height,c=Math.round(e.width*.075),l=Math.round(e.width*.58),u=Math.max(24,Math.round(e.height*.0205)),d=document.createElement(`canvas`),f=3;d.width=l*f,d.height=u*f;let p=d.getContext(`2d`);p&&(p.imageSmoothingEnabled=!0,p.filter=`grayscale(1) contrast(2.1)`,p.drawImage(e,c,Math.round(n-u/2),l,u,0,0,d.width,d.height));let m=(await o.recognize(d)).data.text||``,h=m.replace(/\\s+/g,` `).replace(/[|_[\\]{}]/g,``).trim().replace(/^[-.:]+|[-.:]+$/g,``).trim();s.push(h||`Lavoro fuori standard ${t+1}`)}return s}finally{await o.terminate()}}";
 const CALIBRATED_CHECKBOX_SCANNER = NEW_CHECKBOX_SCANNER.replace('d=.239,f=.0231,p=d+t*f+.046', 'd=.2398,f=.02226,p=d+t*f+.0467');
 const CALIBRATED_EXTRA_OCR = EXTRA_OCR.replace('i=.239+t*.0231+.046,a=.0231', 'i=.2398+t*.02226+.0467,a=.02226');
+const COLOR_CHECKBOX_SCANNER = CALIBRATED_CHECKBOX_SCANNER
+  .replace('u=o(n.x,n.y,(e,t)=>Math.max(Math.abs(e),Math.abs(t))<=r,r),d=o(', 'u=o(n.x,n.y,(e,t)=>Math.max(Math.abs(e),Math.abs(t))<=r,r),R=(()=>{let A=0,B=0;for(let C=n.y-r;C<=n.y+r;C++)for(let D=n.x-r;D<=n.x+r;D++){let E=(Math.max(0,Math.min(e.height-1,C))*e.width+Math.max(0,Math.min(e.width-1,D)))*4,F=i[E],G=i[E+1],H=i[E+2];F>G*1.22&&F>H*1.22&&F-G>28&&(A++),B++}return A/Math.max(1,B)})(),d=o(')
+  .replace('b=m>.03&&(h>.008||_>16||v>8)&&y>=18', 'b=R>.025||m>.03&&(h>.008||_>16||v>8)&&y>=18');
+const SAFE_EXTRA_OCR = CALIBRATED_EXTRA_OCR
+  .replace('let m=(await o.recognize(d)).data.text||``', 'let q=(await o.recognize(d)).data,m=q.confidence>=72?q.text||``:``')
+  .replace('s.push(h||`Lavoro fuori standard ${t+1}`)', 's.push(/[A-Za-zÀ-ÿ]{3}/.test(h)&&h.length<=60?h:``)');
 const NEW_ANALYZE = "async function ki(e,t,n,r){let i=gi(t),a=si.get(e);if(!a){let t=r||await Si(e,n);a=si.get(e)||{text:t,canvas:await xi(e)}}n(85,`Lettura del nuovo foglio Inizio e Fine`);let o=hi(i),s=Oi(a.canvas,o.length,i.additionalWorks?.length||0),c=o.map(([e,t],n)=>{let r=i.components?.[e]||{start:!1,end:!1},a=s[n];return{key:e,label:t,found:!!a,confidence:a?.confidence??100,start:a?.start??!!r.start,end:a?.end??!!r.end}}),l=i.additionalWorks||[];for(let[e,t]of l.entries()){let n=s[o.length+e];c.push({key:t.id,label:t.label,found:!!n,confidence:n?.confidence??100,start:n?.start??!!t.start,end:n?.end??!!t.end,additional:!0})}let u=Math.max(0,s.length-o.length-l.length);if(u){let e=await VPextraOCR(a.canvas,o.length,u,n);for(let t=0;t<u;t++){let n=s[o.length+l.length+t],r=`auto_${Date.now().toString(36)}_${t+1}`;c.push({key:r,label:e[t]||`Lavoro fuori standard ${l.length+t+1}`,found:!!n,confidence:n?.confidence??90,start:!!n?.start,end:!!n?.end,additional:!0,autoDetected:!0===!1})}}return n(100,`Analisi completata`),{text:a.text,results:c}}";
+const SAFE_ANALYZE = NEW_ANALYZE.replace('for(let t=0;t<u;t++){let n=s[o.length+l.length+t]', 'for(let t=0;t<u;t++){if(!e[t])continue;let n=s[o.length+l.length+t]');
 const SAVE_OLD = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0&&(n[t]={...n[t],start:e.start,end:e.end})}else";
 const SAVE_NEW = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0?n[t]={...n[t],label:e.label||n[t].label,start:e.start,end:e.end}:n.push({id:e.key,label:e.label||`Lavoro fuori standard`,start:e.start,end:e.end})}else";
 
@@ -21,15 +28,15 @@ module.exports = async function handler(req, res) {
     let js = await upstream.text();
     const original = js;
     js = js.replace(/async function Si\(e,t\)\{[\s\S]*?(?=function Ci\()/, NEW_ID_SCANNER);
-    js = js.replace(/function Oi\(e,t,n\)\{[\s\S]*?(?=async function ki\()/, CALIBRATED_CHECKBOX_SCANNER + CALIBRATED_EXTRA_OCR);
-    js = js.replace(/async function ki\(e,t,n,r\)\{[\s\S]*?(?=var Ai=)/, NEW_ANALYZE);
+    js = js.replace(/function Oi\(e,t,n\)\{[\s\S]*?(?=async function ki\()/, COLOR_CHECKBOX_SCANNER + SAFE_EXTRA_OCR);
+    js = js.replace(/async function ki\(e,t,n,r\)\{[\s\S]*?(?=var Ai=)/, SAFE_ANALYZE);
     js = js.replace(SAVE_OLD, SAVE_NEW);
     if (js === original || !js.includes('VPextraOCR') || !js.includes('Math.max(n,10)') || !js.includes('n.push({id:e.key') || !js.includes('start:a.value,end:o.value')) {
       return res.status(500).send('GestPro scanner patch markers not found in upstream bundle.');
     }
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.setHeader('X-GestPro-Scanner', 'v7-new-checklist-calibrated');
+    res.setHeader('X-GestPro-Scanner', 'v8-color-safe-extras');
     return res.status(200).send(js);
   } catch (error) {
     return res.status(500).send(`GestPro scanner proxy error: ${error?.message || error}`);
