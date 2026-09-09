@@ -3,6 +3,6 @@ module.exports = function handler(req, res) {
   res.status(200).json({
     ok: true,
     app: 'GestPro Macchine Mobile',
-    scanner: 'v10-browser-loader'
+    scanner: 'v11-row-safe'
   });
 };

@@ -1,14 +1,22 @@
 const ORIGIN = 'https://gestpro-macchine-mobile.plepivincens.chatgpt.site';
-const FALLBACK_CHUNK = '/_next/static/chunks/page-BbvZ9BA7.js';
+const FALLBACK_CHUNK = '/_next/static/chunks/scanner-client-BNDCUlFn.js';
 
 const NEW_ID_SCANNER = "async function Si(e,t){t(8,`Raddrizzamento automatico del foglio`);let n=await xi(e),r=document.createElement(`canvas`),i=Math.round(n.width*.74),a=Math.round(n.height*.025),o=Math.round(n.width*.23),s=Math.round(n.height*.065),c=4;r.width=o*c,r.height=s*c;let l=r.getContext(`2d`,{willReadFrequently:!0});if(!l)throw Error(`Lettura ID non disponibile`);l.imageSmoothingEnabled=!0,l.drawImage(n,i,a,o,s,0,0,r.width,r.height);let u=l.getImageData(0,0,r.width,r.height),d=u.data;for(let e=0;e<d.length;e+=4){let t=d[e]*.299+d[e+1]*.587+d[e+2]*.114,n=t>142?0:255;d[e]=d[e+1]=d[e+2]=n,d[e+3]=255}l.putImageData(u,0,0);let f=await(0,oi.createWorker)(`eng`,1,{logger:e=>{e&&e.status===`recognizing text`&&t(15+Math.round((e.progress||0)*65),`Lettura ID macchina`)}});try{await f.setParameters({tessedit_char_whitelist:`ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`,tessedit_pageseg_mode:`7`});let q=await f.recognize(r),raw=(q.data.text||``).toUpperCase().replace(/\\s+/g,` `).trim(),nums=raw.match(/\\d{2,8}/g)||[],id=nums.sort((e,t)=>t.length-e.length)[0]||``,out=id?`ID ${id} ${raw}`:raw;return si.set(e,{text:out,canvas:n}),out}finally{await f.terminate()}}";
 const NEW_CHECKBOX_SCANNER = "function Oi(e,t,n){let r=e.getContext(`2d`,{willReadFrequently:!0});if(!r)return[];let i=r.getImageData(0,0,e.width,e.height).data,a=(t,n)=>{t=Math.max(0,Math.min(e.width-1,Math.round(t))),n=Math.max(0,Math.min(e.height-1,Math.round(n)));let r=(n*e.width+t)*4;return i[r]*.299+i[r+1]*.587+i[r+2]*.114},o=(e,t,n,r)=>{let i=[];for(let o=t-r;o<=t+r;o++)for(let s=e-r;s<=e+r;s++)n(s-e,o-t)&&i.push(a(s,o));return i},s=e=>e.length?e.reduce((e,t)=>e+t,0)/e.length:255,c=e=>{if(!e.length)return 0;let t=s(e);return Math.sqrt(e.reduce((e,n)=>e+(n-t)**2,0)/e.length)},l=(e,t)=>{let n={x:e,y:t,size:9,score:-1};for(let r=-16;r<=16;r+=2)for(let i=-26;i<=26;i+=2)for(let o=7;o<=13;o+=2){let s=0,c=0;for(let n=-o+2;n<=o-2;n+=2)s+=255-a(e+i-o,t+r+n),s+=255-a(e+i+o,t+r+n),s+=255-a(e+i+n,t+r-o),s+=255-a(e+i+n,t+r+o),c+=4;s/=c,s>n.score&&(n={x:e+i,y:t+r,size:o,score:s})}return n},u=(e,t)=>{let n=l(e,t),r=Math.max(4,Math.round(n.size*.58)),i=Math.max(r+5,Math.round(n.size*1.65)),u=o(n.x,n.y,(e,t)=>Math.max(Math.abs(e),Math.abs(t))<=r,r),d=o(n.x,n.y,(e,t)=>{let n=Math.max(Math.abs(e),Math.abs(t));return n>=r+4&&n<=i},i),f=s(d),p=Math.max(72,Math.min(218,f-38)),m=u.filter(e=>e<p).length/Math.max(1,u.length),h=u.filter(e=>e<Math.max(55,f-72)).length/Math.max(1,u.length),g=s(u),_=c(u),v=Math.max(0,f-g),y=260*m+180*h+.32*_+.28*v,b=m>.03&&(h>.008||_>16||v>8)&&y>=18,x=Math.max(62,Math.min(99,Math.round(b?68+Math.min(31,(y-18)*1.15):68+Math.min(31,(18-y)*1.3))));return{value:b,confidence:x,score:y,border:n.score,x:n.x,y:n.y,size:n.size}},d=.239,f=.0231,p=d+t*f+.046,m=Array.from({length:t},(n,r)=>{let i=d+r*f,a=u(.752*e.width,i*e.height),o=u(.89*e.width,i*e.height);return{start:a.value,end:o.value,confidence:Math.min(a.confidence,o.confidence),detected:!0}}),h=[],g=0;for(let r=0;r<Math.max(n,10);r++){let i=p+r*f,a=u(.752*e.width,i*e.height),o=u(.89*e.width,i*e.height),s=Math.min(a.border,o.border)>108&&(a.border+o.border)/2>120;if(r<n||s)h.push({start:a.value,end:o.value,confidence:Math.min(a.confidence,o.confidence),detected:s}),g=0;else if(++g>=2&&r>=n)break}return[...m,...h]}";
 const EXTRA_OCR = "async function VPextraOCR(e,t,n,r){if(!n)return[];r(90,`Lettura lavori fuori standard`);let i=.239+t*.0231+.046,a=.0231,o=await(0,oi.createWorker)(`eng`,1,{logger:()=>{}}),s=[];try{await o.setParameters({tessedit_pageseg_mode:`7`,preserve_interword_spaces:`1`});for(let t=0;t<n;t++){let n=(i+t*a)*e.height,c=Math.round(e.width*.075),l=Math.round(e.width*.58),u=Math.max(24,Math.round(e.height*.0205)),d=document.createElement(`canvas`),f=3;d.width=l*f,d.height=u*f;let p=d.getContext(`2d`);p&&(p.imageSmoothingEnabled=!0,p.filter=`grayscale(1) contrast(2.1)`,p.drawImage(e,c,Math.round(n-u/2),l,u,0,0,d.width,d.height));let m=(await o.recognize(d)).data.text||``,h=m.replace(/\\s+/g,` `).replace(/[|_[\\]{}]/g,``).trim().replace(/^[-.:]+|[-.:]+$/g,``).trim();s.push(h||`Lavoro fuori standard ${t+1}`)}return s}finally{await o.terminate()}}";
 const CALIBRATED_CHECKBOX_SCANNER = NEW_CHECKBOX_SCANNER.replace('d=.239,f=.0231,p=d+t*f+.046', 'd=.2398,f=.02226,p=d+t*f+.0467');
 const CALIBRATED_EXTRA_OCR = EXTRA_OCR.replace('i=.239+t*.0231+.046,a=.0231', 'i=.2398+t*.02226+.0467,a=.02226');
-const COLOR_CHECKBOX_SCANNER = CALIBRATED_CHECKBOX_SCANNER
+const ROW_SAFE_CHECKBOX_SCANNER = CALIBRATED_CHECKBOX_SCANNER
+  // On the normalized page, adjacent rows are only about 22 px apart.
+  // The previous +/-16 px vertical search could lock onto a checkbox in the
+  // row above or below. Perspective correction already aligns the sheet, so
+  // limiting the local search to +/-8 px keeps every tick on its own row.
+  .replace('for(let r=-16;r<=16;r+=2)for(let i=-26;i<=26;i+=2)for(let o=7;o<=13;o+=2)', 'for(let r=-8;r<=8;r+=2)for(let i=-22;i<=22;i+=2)for(let o=7;o<=13;o+=2)');
+const COLOR_CHECKBOX_SCANNER = ROW_SAFE_CHECKBOX_SCANNER
   .replace('u=o(n.x,n.y,(e,t)=>Math.max(Math.abs(e),Math.abs(t))<=r,r),d=o(', 'u=o(n.x,n.y,(e,t)=>Math.max(Math.abs(e),Math.abs(t))<=r,r),R=(()=>{let A=0,B=0;for(let C=n.y-r;C<=n.y+r;C++)for(let D=n.x-r;D<=n.x+r;D++){let E=(Math.max(0,Math.min(e.height-1,C))*e.width+Math.max(0,Math.min(e.width-1,D)))*4,F=i[E],G=i[E+1],H=i[E+2];F>G*1.22&&F>H*1.22&&F-G>28&&(A++),B++}return A/Math.max(1,B)})(),d=o(')
-  .replace('b=m>.03&&(h>.008||_>16||v>8)&&y>=18', 'b=R>.025||m>.03&&(h>.008||_>16||v>8)&&y>=18');
+  // Accept thin pen marks and faint red ticks, but still require real ink
+  // contrast so an empty outlined square is not considered selected.
+  .replace('b=m>.03&&(h>.008||_>16||v>8)&&y>=18', 'b=R>.018||m>.025&&(h>.006||_>14||v>7)&&y>=16');
 const SAFE_EXTRA_OCR = CALIBRATED_EXTRA_OCR
   .replace('let m=(await o.recognize(d)).data.text||``', 'let q=(await o.recognize(d)).data,m=q.confidence>=72?q.text||``:``')
   .replace('s.push(h||`Lavoro fuori standard ${t+1}`)', 's.push(/[A-Za-zÀ-ÿ]{3}/.test(h)&&h.length<=60?h:``)');
@@ -32,7 +40,7 @@ module.exports = async function handler(req, res) {
     if (!containsScanner) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       res.setHeader('Cache-Control', 'no-store, max-age=0');
-      res.setHeader('X-GestPro-Scanner', 'v10-browser-loader');
+      res.setHeader('X-GestPro-Scanner', 'v11-row-safe');
       return res.status(200).send(js);
     }
     js = js.replace(/async function Si\(e,t\)\{[\s\S]*?(?=function Ci\()/, NEW_ID_SCANNER);
@@ -44,7 +52,7 @@ module.exports = async function handler(req, res) {
     }
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.setHeader('X-GestPro-Scanner', 'v10-browser-loader');
+    res.setHeader('X-GestPro-Scanner', 'v11-row-safe');
     return res.status(200).send(js);
   } catch (error) {
     return res.status(500).send(`GestPro scanner proxy error: ${error?.message || error}`);
