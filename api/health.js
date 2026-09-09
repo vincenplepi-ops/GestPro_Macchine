@@ -3,6 +3,6 @@ module.exports = function handler(req, res) {
   res.status(200).json({
     ok: true,
     app: 'GestPro Macchine Mobile',
-    scanner: 'v13-template-aligned'
+    scanner: 'v14-cache-busted'
   });
 };

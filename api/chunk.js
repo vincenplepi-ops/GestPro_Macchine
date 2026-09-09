@@ -1,5 +1,6 @@
 const ORIGIN = 'https://gestpro-macchine-mobile.plepivincens.chatgpt.site';
 const FALLBACK_CHUNK = '/_next/static/chunks/scanner-client-BNDCUlFn.js';
+const RELEASE = '14';
 
 // The generic document fallback can mistake the entire iPhone photograph for
 // the sheet when the white paper touches a light laptop background. The two
@@ -54,9 +55,15 @@ module.exports = async function handler(req, res) {
     const original = js;
     const containsScanner = /async function Si\(e,t\)/.test(js) && /function Oi\(e,t,n\)/.test(js);
     if (!containsScanner) {
+      // The page bundle loads the scanner with a relative dynamic import.
+      // Version that URL too so Safari cannot reuse its previous scanner.
+      js = js.replace(
+        /(scanner-client-[A-Za-z0-9_-]+\.js)(?!\?vp=)/g,
+        `$1?vp=${RELEASE}`
+      );
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-      res.setHeader('Cache-Control', 'no-store, max-age=0');
-      res.setHeader('X-GestPro-Scanner', 'v13-template-aligned');
+      res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+      res.setHeader('X-GestPro-Scanner', 'v14-cache-busted');
       return res.status(200).send(js);
     }
     js = js.replace(/async function xi\(e\)\{[\s\S]*?(?=async function Si\()/, ROBUST_PAGE_ALIGNER);
@@ -68,8 +75,8 @@ module.exports = async function handler(req, res) {
       return res.status(500).send('GestPro scanner patch markers not found in upstream bundle.');
     }
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.setHeader('X-GestPro-Scanner', 'v13-template-aligned');
+    res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+    res.setHeader('X-GestPro-Scanner', 'v14-cache-busted');
     return res.status(200).send(js);
   } catch (error) {
     return res.status(500).send(`GestPro scanner proxy error: ${error?.message || error}`);

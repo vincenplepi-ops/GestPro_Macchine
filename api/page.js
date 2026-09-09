@@ -1,4 +1,5 @@
 const ORIGIN = 'https://gestpro-macchine-mobile.plepivincens.chatgpt.site';
+const RELEASE = '14';
 
 const STYLE = `
 <style id="vp-wallpaper-force">
@@ -15,9 +16,18 @@ module.exports = async function handler(req,res){
     const upstream = await fetch(ORIGIN + '/', {headers:{'user-agent':'GestPro-Vercel-Page-Proxy/1.0'}});
     if(!upstream.ok) return res.status(upstream.status).send('Upstream page error');
     let html = await upstream.text();
+    // Give every release a new entry-bundle URL. This is important for
+    // installed iPhone PWAs, which may otherwise keep executing an older
+    // scanner even though the proxy response itself is marked no-store.
+    html = html.replace(
+      /(\/_next\/static\/chunks\/page-[A-Za-z0-9_-]+\.js)(?!\?vp=)/g,
+      `$1?vp=${RELEASE}`
+    );
     html = html.includes('</head>') ? html.replace('</head>', STYLE + '</head>') : STYLE + html;
     res.setHeader('Content-Type','text/html; charset=utf-8');
-    res.setHeader('Cache-Control','no-store, max-age=0');
+    res.setHeader('Cache-Control','no-store, max-age=0, must-revalidate');
+    res.setHeader('Pragma','no-cache');
+    res.setHeader('Expires','0');
     res.status(200).send(html);
   }catch(e){
     res.status(500).send('GestPro page proxy error: ' + (e?.message || e));
