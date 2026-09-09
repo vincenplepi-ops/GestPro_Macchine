@@ -3,6 +3,6 @@ module.exports = function handler(req, res) {
   res.status(200).json({
     ok: true,
     app: 'GestPro Macchine Mobile',
-    scanner: 'v6-new-checklist-start-end'
+    scanner: 'v7-new-checklist-calibrated'
   });
 };
