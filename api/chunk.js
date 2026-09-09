@@ -14,6 +14,7 @@ const SAFE_EXTRA_OCR = CALIBRATED_EXTRA_OCR
   .replace('s.push(h||`Lavoro fuori standard ${t+1}`)', 's.push(/[A-Za-zÀ-ÿ]{3}/.test(h)&&h.length<=60?h:``)');
 const NEW_ANALYZE = "async function ki(e,t,n,r){let i=gi(t),a=si.get(e);if(!a){let t=r||await Si(e,n);a=si.get(e)||{text:t,canvas:await xi(e)}}n(85,`Lettura del nuovo foglio Inizio e Fine`);let o=hi(i),s=Oi(a.canvas,o.length,i.additionalWorks?.length||0),c=o.map(([e,t],n)=>{let r=i.components?.[e]||{start:!1,end:!1},a=s[n];return{key:e,label:t,found:!!a,confidence:a?.confidence??100,start:a?.start??!!r.start,end:a?.end??!!r.end}}),l=i.additionalWorks||[];for(let[e,t]of l.entries()){let n=s[o.length+e];c.push({key:t.id,label:t.label,found:!!n,confidence:n?.confidence??100,start:n?.start??!!t.start,end:n?.end??!!t.end,additional:!0})}let u=Math.max(0,s.length-o.length-l.length);if(u){let e=await VPextraOCR(a.canvas,o.length,u,n);for(let t=0;t<u;t++){let n=s[o.length+l.length+t],r=`auto_${Date.now().toString(36)}_${t+1}`;c.push({key:r,label:e[t]||`Lavoro fuori standard ${l.length+t+1}`,found:!!n,confidence:n?.confidence??90,start:!!n?.start,end:!!n?.end,additional:!0,autoDetected:!0===!1})}}return n(100,`Analisi completata`),{text:a.text,results:c}}";
 const SAFE_ANALYZE = NEW_ANALYZE.replace('for(let t=0;t<u;t++){let n=s[o.length+l.length+t]', 'for(let t=0;t<u;t++){if(!e[t])continue;let n=s[o.length+l.length+t]');
+const NO_AUTO_EXTRAS_ANALYZE = SAFE_ANALYZE.replace(/let u=Math\.max\(0,s\.length-o\.length-l\.length\);if\(u\)\{[\s\S]*?\}\}return n\(100,`Analisi completata`\)/, 'return n(100,`Analisi completata`)');
 const SAVE_OLD = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0&&(n[t]={...n[t],start:e.start,end:e.end})}else";
 const SAVE_NEW = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0?n[t]={...n[t],label:e.label||n[t].label,start:e.start,end:e.end}:n.push({id:e.key,label:e.label||`Lavoro fuori standard`,start:e.start,end:e.end})}else";
 
@@ -29,14 +30,14 @@ module.exports = async function handler(req, res) {
     const original = js;
     js = js.replace(/async function Si\(e,t\)\{[\s\S]*?(?=function Ci\()/, NEW_ID_SCANNER);
     js = js.replace(/function Oi\(e,t,n\)\{[\s\S]*?(?=async function ki\()/, COLOR_CHECKBOX_SCANNER + SAFE_EXTRA_OCR);
-    js = js.replace(/async function ki\(e,t,n,r\)\{[\s\S]*?(?=var Ai=)/, SAFE_ANALYZE);
+    js = js.replace(/async function ki\(e,t,n,r\)\{[\s\S]*?(?=var Ai=)/, NO_AUTO_EXTRAS_ANALYZE);
     js = js.replace(SAVE_OLD, SAVE_NEW);
     if (js === original || !js.includes('VPextraOCR') || !js.includes('Math.max(n,10)') || !js.includes('n.push({id:e.key') || !js.includes('start:a.value,end:o.value')) {
       return res.status(500).send('GestPro scanner patch markers not found in upstream bundle.');
     }
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.setHeader('X-GestPro-Scanner', 'v8-color-safe-extras');
+    res.setHeader('X-GestPro-Scanner', 'v9-no-invented-extras');
     return res.status(200).send(js);
   } catch (error) {
     return res.status(500).send(`GestPro scanner proxy error: ${error?.message || error}`);

@@ -3,6 +3,6 @@ module.exports = function handler(req, res) {
   res.status(200).json({
     ok: true,
     app: 'GestPro Macchine Mobile',
-    scanner: 'v8-color-safe-extras'
+    scanner: 'v9-no-invented-extras'
   });
 };
