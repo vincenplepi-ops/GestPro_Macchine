@@ -3,6 +3,6 @@ module.exports = function handler(req, res) {
   res.status(200).json({
     ok: true,
     app: 'GestPro Macchine Mobile',
-    scanner: 'v3-id-robust-checkboxes'
+    scanner: 'v5-stable-recognition-start-end'
   });
 };

@@ -10,7 +10,7 @@ Repository Vercel per mantenere il GestPro Macchine Mobile originale e sostituir
 - tolleranza maggiore a prospettiva, luce e spunte leggere
 
 ## Architettura
-Vercel inoltra l'app al sito GestPro originale e intercetta il bundle dello scanner. La funzione `api/chunk.js` applica il patch V3 al bundle prima di inviarlo al browser.
+Vercel inoltra l'app al sito GestPro originale e intercetta automaticamente il bundle dello scanner. La funzione `api/chunk.js` conserva il riconoscimento fotografico stabile e lo adatta ai campi `Inizio` / `Fine`, comprese le nuove righe standard e i lavori fuori standard.
 
 Health check: `/api/health`
 
