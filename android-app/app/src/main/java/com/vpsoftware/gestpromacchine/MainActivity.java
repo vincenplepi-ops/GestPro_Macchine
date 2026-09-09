@@ -120,7 +120,9 @@ public class MainActivity extends Activity {
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
-        settings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        // Lo scanner è distribuito dal sito ufficiale: Android deve caricare sempre
+        // la versione online corrente, senza riutilizzare un vecchio bundle salvato.
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         settings.setUserAgentString(settings.getUserAgentString() + " GestProAndroid/" + getCurrentVersionName());
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
