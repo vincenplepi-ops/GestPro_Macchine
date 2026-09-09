@@ -12,7 +12,17 @@ const ROW_SAFE_CHECKBOX_SCANNER = CALIBRATED_CHECKBOX_SCANNER
   // row above or below. Perspective correction already aligns the sheet, so
   // limiting the local search to +/-8 px keeps every tick on its own row.
   .replace('for(let r=-16;r<=16;r+=2)for(let i=-26;i<=26;i+=2)for(let o=7;o<=13;o+=2)', 'for(let r=-8;r<=8;r+=2)for(let i=-22;i<=22;i+=2)for(let o=7;o<=13;o+=2)');
-const COLOR_CHECKBOX_SCANNER = ROW_SAFE_CHECKBOX_SCANNER
+const GRID_ALIGNED_CHECKBOX_SCANNER = ROW_SAFE_CHECKBOX_SCANNER
+  // Use the first and last printed checkbox pairs as anchors. G and H are
+  // new calibrated values; d and f stay untouched to avoid duplicate local
+  // declarations in the generated minified browser bundle.
+  .replace(
+    'd=.2398,f=.02226,p=d+t*f+.0467,m=Array.from',
+    'd=.2398,f=.02226,A=t>1?l(.752*e.width,d*e.height):null,B=t>1?l(.89*e.width,d*e.height):null,C=t>1?l(.752*e.width,(d+(t-1)*f)*e.height):null,D=t>1?l(.89*e.width,(d+(t-1)*f)*e.height):null,E=A&&B&&C&&D&&Math.min(A.score,B.score,C.score,D.score)>75,G=E?(A.y+B.y)/(2*e.height):d,H=E?((C.y+D.y)/(2*e.height)-G)/(t-1):f,p=G+t*H+.0467,m=Array.from'
+  )
+  .replace('let i=d+r*f,a=u(.752*e.width,i*e.height)', 'let i=G+r*H,a=u(.752*e.width,i*e.height)')
+  .replace('let i=p+r*f,a=u(.752*e.width,i*e.height)', 'let i=p+r*H,a=u(.752*e.width,i*e.height)');
+const COLOR_CHECKBOX_SCANNER = GRID_ALIGNED_CHECKBOX_SCANNER
   .replace('u=o(n.x,n.y,(e,t)=>Math.max(Math.abs(e),Math.abs(t))<=r,r),d=o(', 'u=o(n.x,n.y,(e,t)=>Math.max(Math.abs(e),Math.abs(t))<=r,r),R=(()=>{let A=0,B=0;for(let C=n.y-r;C<=n.y+r;C++)for(let D=n.x-r;D<=n.x+r;D++){let E=(Math.max(0,Math.min(e.height-1,C))*e.width+Math.max(0,Math.min(e.width-1,D)))*4,F=i[E],G=i[E+1],H=i[E+2];F>G*1.22&&F>H*1.22&&F-G>28&&(A++),B++}return A/Math.max(1,B)})(),d=o(')
   // Accept thin pen marks and faint red ticks, but still require real ink
   // contrast so an empty outlined square is not considered selected.
@@ -40,7 +50,7 @@ module.exports = async function handler(req, res) {
     if (!containsScanner) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       res.setHeader('Cache-Control', 'no-store, max-age=0');
-      res.setHeader('X-GestPro-Scanner', 'v11-row-safe');
+      res.setHeader('X-GestPro-Scanner', 'v12-grid-aligned-safe');
       return res.status(200).send(js);
     }
     js = js.replace(/async function Si\(e,t\)\{[\s\S]*?(?=function Ci\()/, NEW_ID_SCANNER);
@@ -52,7 +62,7 @@ module.exports = async function handler(req, res) {
     }
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.setHeader('X-GestPro-Scanner', 'v11-row-safe');
+    res.setHeader('X-GestPro-Scanner', 'v12-grid-aligned-safe');
     return res.status(200).send(js);
   } catch (error) {
     return res.status(500).send(`GestPro scanner proxy error: ${error?.message || error}`);
