@@ -1,0 +1,46 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.vpsoftware.gestpromacchine'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.vpsoftware.gestpromacchine'
+        minSdk 26
+        targetSdk 35
+        versionCode 8
+        versionName '1.0.7'
+    }
+
+    signingConfigs {
+        release {
+            storeFile file(System.getenv('GESTPRO_KEYSTORE_PATH') ?: 'missing-release-key.jks')
+            storePassword System.getenv('GESTPRO_KEYSTORE_PASSWORD') ?: ''
+            keyAlias System.getenv('GESTPRO_KEY_ALIAS') ?: 'gestpro'
+            keyPassword System.getenv('GESTPRO_KEY_PASSWORD') ?: ''
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core:1.15.0'
+}
