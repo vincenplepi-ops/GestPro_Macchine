@@ -43,6 +43,10 @@ const SAVE_OLD = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0&&(n[t
 const SAVE_NEW = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0?n[t]={...n[t],label:e.label||n[t].label,start:e.start,end:e.end}:n.push({id:e.key,label:e.label||`Lavoro fuori standard`,start:e.start,end:e.end})}else";
 const HOME_FILTER_OLD = "i.filter(e=>(Pi(n)||!Fi(e))&&`${e.id} ${e.customer} ${e.model} ${e.slot}`.toLowerCase().includes(f.toLowerCase()))";
 const HOME_FILTER_NEW = "i.filter(e=>e.slot!=null&&String(e.slot).trim()&&!/^(?:0+|next(?:\\s+slot)?)$/i.test(String(e.slot).trim())&&(Pi(n)||!Fi(e))&&`${e.id} ${e.customer} ${e.model} ${e.slot}`.toLowerCase().includes(f.toLowerCase()))";
+const STAGE_ORDER_OLD = "t(`produzione`).end||t(`collaudo`).start?`In collaudo`:t(`produzione`).start||e.slot?`In produzione`:t(`basamento_piazzato`).start||t(`basamento_piazzato`).end?`Basamento piazzato`:`Pianificata`";
+const STAGE_ORDER_NEW = "t(`produzione`).end||t(`collaudo`).start?`In collaudo`:(t(`basamento_piazzato`).start||t(`basamento_piazzato`).end)&&!t(`produzione`).start?`Basamento piazzato`:t(`produzione`).start||e.slot?`In produzione`:`Pianificata`";
+const COLOR_ORDER_OLD = "t(`produzione`).end||t(`collaudo`).start?{color:`orange`,label:`In collaudo`}:t(`produzione`).start||n?{color:`yellow`,label:`Macchina al montaggio`}:t(`basamento_piazzato`).start||t(`basamento_piazzato`).end?{color:`red`,label:`Basamento piazzato`}:{color:`gray`,label:`NEXT SLOT`}";
+const COLOR_ORDER_NEW = "t(`produzione`).end||t(`collaudo`).start?{color:`orange`,label:`In collaudo`}:(t(`basamento_piazzato`).start||t(`basamento_piazzato`).end)&&!t(`produzione`).start?{color:`red`,label:`Basamento piazzato`}:t(`produzione`).start||n?{color:`yellow`,label:`Macchina al montaggio`}:{color:`gray`,label:`NEXT SLOT`}";
 
 module.exports = async function handler(req, res) {
   try {
@@ -67,7 +71,9 @@ module.exports = async function handler(req, res) {
     js = js.replace(/async function ki\(e,t,n,r\)\{[\s\S]*?(?=var Ai=)/, NO_AUTO_EXTRAS_ANALYZE);
     js = js.replace(SAVE_OLD, SAVE_NEW);
     js = js.replace(HOME_FILTER_OLD, HOME_FILTER_NEW);
-    if (js === original || !js.includes('VPtemplateBands') || !js.includes('VPextraOCR') || !js.includes('Math.max(n,10)') || !js.includes('n.push({id:e.key') || !js.includes('start:a.value,end:o.value') || !js.includes('e.slot!=null&&String(e.slot).trim()')) {
+    js = js.replace(STAGE_ORDER_OLD, STAGE_ORDER_NEW);
+    js = js.replace(COLOR_ORDER_OLD, COLOR_ORDER_NEW);
+    if (js === original || !js.includes('VPtemplateBands') || !js.includes('VPextraOCR') || !js.includes('Math.max(n,10)') || !js.includes('n.push({id:e.key') || !js.includes('start:a.value,end:o.value') || !js.includes('e.slot!=null&&String(e.slot).trim()') || !js.includes(')&&!t(`produzione`).start?{color:`red`')) {
       return res.status(500).send('GestPro scanner patch markers not found in upstream bundle.');
     }
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
