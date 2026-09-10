@@ -1,5 +1,5 @@
 const ORIGIN = 'https://gestpro-macchine-mobile.plepivincens.chatgpt.site';
-const RELEASE = '14';
+const RELEASE = '15';
 
 const STYLE = `
 <style id="vp-wallpaper-force">
