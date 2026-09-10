@@ -3,6 +3,6 @@ module.exports = function handler(req, res) {
   res.status(200).json({
     ok: true,
     app: 'GestPro Macchine Mobile',
-    scanner: 'v20-iphone-ocr-fix'
+    scanner: 'v21-safari-worker-fix'
   });
 };

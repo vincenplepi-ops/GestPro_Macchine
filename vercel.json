@@ -6,6 +6,10 @@
       "dest": "/api/page"
     },
     {
+      "src": "/vendor/tesseract-worker.js",
+      "dest": "/api/tesseract-worker"
+    },
+    {
       "src": "/_next/static/chunks/page-(.*)\\.js",
       "dest": "/api/chunk?chunk=page-$1.js"
     },
