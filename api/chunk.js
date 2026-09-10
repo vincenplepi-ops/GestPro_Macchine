@@ -41,6 +41,8 @@ const SAFE_ANALYZE = NEW_ANALYZE.replace('for(let t=0;t<u;t++){let n=s[o.length+
 const NO_AUTO_EXTRAS_ANALYZE = SAFE_ANALYZE.replace(/let u=Math\.max\(0,s\.length-o\.length-l\.length\);if\(u\)\{[\s\S]*?\}\}return n\(100,`Analisi completata`\)/, 'return n(100,`Analisi completata`)');
 const SAVE_OLD = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0&&(n[t]={...n[t],start:e.start,end:e.end})}else";
 const SAVE_NEW = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0?n[t]={...n[t],label:e.label||n[t].label,start:e.start,end:e.end}:n.push({id:e.key,label:e.label||`Lavoro fuori standard`,start:e.start,end:e.end})}else";
+const HOME_FILTER_OLD = "i.filter(e=>(Pi(n)||!Fi(e))&&`${e.id} ${e.customer} ${e.model} ${e.slot}`.toLowerCase().includes(f.toLowerCase()))";
+const HOME_FILTER_NEW = "i.filter(e=>e.slot!=null&&String(e.slot).trim()&&!/^next(?:\\s+slot)?$/i.test(String(e.slot).trim())&&(Pi(n)||!Fi(e))&&`${e.id} ${e.customer} ${e.model} ${e.slot}`.toLowerCase().includes(f.toLowerCase()))";
 
 module.exports = async function handler(req, res) {
   try {
@@ -64,7 +66,8 @@ module.exports = async function handler(req, res) {
     js = js.replace(/function Oi\(e,t,n\)\{[\s\S]*?(?=async function ki\()/, COLOR_CHECKBOX_SCANNER + SAFE_EXTRA_OCR);
     js = js.replace(/async function ki\(e,t,n,r\)\{[\s\S]*?(?=var Ai=)/, NO_AUTO_EXTRAS_ANALYZE);
     js = js.replace(SAVE_OLD, SAVE_NEW);
-    if (js === original || !js.includes('VPtemplateBands') || !js.includes('VPextraOCR') || !js.includes('Math.max(n,10)') || !js.includes('n.push({id:e.key') || !js.includes('start:a.value,end:o.value')) {
+    js = js.replace(HOME_FILTER_OLD, HOME_FILTER_NEW);
+    if (js === original || !js.includes('VPtemplateBands') || !js.includes('VPextraOCR') || !js.includes('Math.max(n,10)') || !js.includes('n.push({id:e.key') || !js.includes('start:a.value,end:o.value') || !js.includes('e.slot!=null&&String(e.slot).trim()')) {
       return res.status(500).send('GestPro scanner patch markers not found in upstream bundle.');
     }
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
