@@ -1,11 +1,11 @@
 const ORIGIN = 'https://gestpro-macchine-mobile.plepivincens.chatgpt.site';
 const FALLBACK_CHUNK = '/_next/static/chunks/scanner-client-BNDCUlFn.js';
-const RELEASE = '21';
+const RELEASE = '22';
 
 // The selected photo remains untouched in the app. This canvas is only the
 // temporary OpenCV working surface. Its size is still well above the final
 // normalized checklist (1240x1756), so no checkbox detail is lost.
-const SAFARI_SAFE_WORKING_CANVAS = "function yi(e){return new Promise((t,n)=>{let r=new Image;r.onload=()=>{let e=document.createElement(`canvas`),n=Math.max(r.naturalWidth,r.naturalHeight),i=Math.min(1,2200/n);e.width=Math.max(1,Math.round(r.naturalWidth*i)),e.height=Math.max(1,Math.round(r.naturalHeight*i));let a=e.getContext(`2d`);if(!a)return n(Error(`Scanner immagine non disponibile`));a.imageSmoothingEnabled=!0,a.imageSmoothingQuality=`high`,a.drawImage(r,0,0,e.width,e.height),t(e)},r.onerror=()=>n(Error(`Immagine non leggibile`)),r.src=e})}";
+const SAFARI_SAFE_WORKING_CANVAS = "function yi(e){return new Promise((t,n)=>{let r=new Image;r.onload=()=>{let e=document.createElement(`canvas`),n=Math.max(r.naturalWidth,r.naturalHeight),i=Math.min(1,1600/n);e.width=Math.max(1,Math.round(r.naturalWidth*i)),e.height=Math.max(1,Math.round(r.naturalHeight*i));let a=e.getContext(`2d`);if(!a)return n(Error(`Scanner immagine non disponibile`));a.imageSmoothingEnabled=!0,a.imageSmoothingQuality=`high`,a.drawImage(r,0,0,e.width,e.height),t(e)},r.onerror=()=>n(Error(`Immagine non leggibile`)),r.src=e})}";
 
 // The generic document fallback can mistake the entire iPhone photograph for
 // the sheet when the white paper touches a light laptop background. The two
@@ -66,9 +66,19 @@ module.exports = async function handler(req, res) {
         /(scanner-client-[A-Za-z0-9_-]+\.js)(?!\?vp=)/g,
         `$1?vp=${RELEASE}`
       );
+      // Let React paint the progress panel before starting synchronous OpenCV,
+      // and avoid decoding the full preview image at the same time as scanner.
+      js = js.replace(
+        'try{let e=await Di(t.url,i,(e,t)=>{N(e),F(t)})',
+        'try{await new Promise(e=>requestAnimationFrame(()=>requestAnimationFrame(e)));let e=await Di(t.url,i,(e,t)=>{N(e),F(t)})'
+      );
+      js = js.replace(
+        '(0,Q.jsx)(`img`,{src:_.url,alt:`Checklist fotografata`}),H&&',
+        '!H&&(0,Q.jsx)(`img`,{src:_.url,alt:`Checklist fotografata`}),H&&'
+      );
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
-      res.setHeader('X-GestPro-Scanner', 'v21-safari-worker-fix');
+      res.setHeader('X-GestPro-Scanner', 'v22-iphone-ui-unblock');
       return res.status(200).send(js);
     }
     // Stop before bi(): that helper must remain in the bundle because xi()
@@ -79,12 +89,20 @@ module.exports = async function handler(req, res) {
     js = js.replace(/function Oi\(e,t,n\)\{[\s\S]*?(?=async function ki\()/, COLOR_CHECKBOX_SCANNER + SAFE_EXTRA_OCR);
     js = js.replace(/async function ki\(e,t,n,r\)\{[\s\S]*?(?=var Ai=)/, NO_AUTO_EXTRAS_ANALYZE);
     js = js.replace(SAVE_OLD, SAVE_NEW);
-    if (js === original || !js.includes('workerPath:`/vendor/tesseract-worker.js`') || !js.includes('2200/n') || !js.includes('function bi(e)') || !js.includes('VPtemplateBands') || !js.includes('VPextraOCR') || !js.includes('Math.max(n,10)') || !js.includes('n.push({id:e.key') || !js.includes('start:a.value,end:o.value')) {
+    js = js.replace(
+      'try{let e=await Di(t.url,i,(e,t)=>{N(e),F(t)})',
+      'try{await new Promise(e=>requestAnimationFrame(()=>requestAnimationFrame(e)));let e=await Di(t.url,i,(e,t)=>{N(e),F(t)})'
+    );
+    js = js.replace(
+      '(0,Q.jsx)(`img`,{src:_.url,alt:`Checklist fotografata`}),H&&',
+      '!H&&(0,Q.jsx)(`img`,{src:_.url,alt:`Checklist fotografata`}),H&&'
+    );
+    if (js === original || !js.includes('requestAnimationFrame(()=>requestAnimationFrame(e))') || !js.includes('!H&&(0,Q.jsx)(`img`,{src:_.url,alt:`Checklist fotografata`})') || !js.includes('workerPath:`/vendor/tesseract-worker.js`') || !js.includes('1600/n') || !js.includes('function bi(e)') || !js.includes('VPtemplateBands') || !js.includes('VPextraOCR') || !js.includes('Math.max(n,10)') || !js.includes('n.push({id:e.key') || !js.includes('start:a.value,end:o.value')) {
       return res.status(500).send('GestPro scanner patch markers not found in upstream bundle.');
     }
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
-    res.setHeader('X-GestPro-Scanner', 'v21-safari-worker-fix');
+    res.setHeader('X-GestPro-Scanner', 'v22-iphone-ui-unblock');
     return res.status(200).send(js);
   } catch (error) {
     return res.status(500).send(`GestPro scanner proxy error: ${error?.message || error}`);
