@@ -42,7 +42,7 @@ const NO_AUTO_EXTRAS_ANALYZE = SAFE_ANALYZE.replace(/let u=Math\.max\(0,s\.lengt
 const SAVE_OLD = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0&&(n[t]={...n[t],start:e.start,end:e.end})}else";
 const SAVE_NEW = "if(e.additional){let t=n.findIndex(t=>t.id===e.key);t>=0?n[t]={...n[t],label:e.label||n[t].label,start:e.start,end:e.end}:n.push({id:e.key,label:e.label||`Lavoro fuori standard`,start:e.start,end:e.end})}else";
 const HOME_FILTER_OLD = "i.filter(e=>(Pi(n)||!Fi(e))&&`${e.id} ${e.customer} ${e.model} ${e.slot}`.toLowerCase().includes(f.toLowerCase()))";
-const HOME_FILTER_NEW = "i.filter(e=>e.slot!=null&&String(e.slot).trim()&&!/^next(?:\\s+slot)?$/i.test(String(e.slot).trim())&&(Pi(n)||!Fi(e))&&`${e.id} ${e.customer} ${e.model} ${e.slot}`.toLowerCase().includes(f.toLowerCase()))";
+const HOME_FILTER_NEW = "i.filter(e=>e.slot!=null&&String(e.slot).trim()&&!/^(?:0+|next(?:\\s+slot)?)$/i.test(String(e.slot).trim())&&(Pi(n)||!Fi(e))&&`${e.id} ${e.customer} ${e.model} ${e.slot}`.toLowerCase().includes(f.toLowerCase()))";
 
 module.exports = async function handler(req, res) {
   try {
