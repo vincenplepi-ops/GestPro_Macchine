@@ -1,10 +1,6 @@
 const ORIGIN = 'https://gestpro-macchine-mobile.plepivincens.chatgpt.site';
 const FALLBACK_CHUNK = '/_next/static/chunks/scanner-client-BNDCUlFn.js';
-const RELEASE = '17';
-
-// Limit large iPhone photos before OpenCV creates multiple working matrices.
-// 2048 px keeps the checkbox detail but avoids Safari running out of memory.
-const MOBILE_SAFE_IMAGE_DECODER = "function yi(e){return new Promise((t,n)=>{let r=new Image;r.onload=()=>{let e=document.createElement(`canvas`),n=Math.max(r.naturalWidth,r.naturalHeight),i=Math.min(1,2048/n);e.width=Math.max(1,Math.round(r.naturalWidth*i)),e.height=Math.max(1,Math.round(r.naturalHeight*i));let a=e.getContext(`2d`);if(!a)return n(Error(`Scanner immagine non disponibile`));a.imageSmoothingEnabled=!0,a.imageSmoothingQuality=`high`,a.drawImage(r,0,0,e.width,e.height),t(e)},r.onerror=()=>n(Error(`Immagine non leggibile`)),r.src=e})}";
+const RELEASE = '18';
 
 // The generic document fallback can mistake the entire iPhone photograph for
 // the sheet when the white paper touches a light laptop background. The two
@@ -67,23 +63,20 @@ module.exports = async function handler(req, res) {
       );
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
-      res.setHeader('X-GestPro-Scanner', 'v17-perspective-fix');
+      res.setHeader('X-GestPro-Scanner', 'v18-full-quality');
       return res.status(200).send(js);
     }
-    // Preserve function bi(), which orders the four page corners and sits
-    // between yi() and xi() in the upstream bundle.
-    js = js.replace(/function yi\(e\)\{[\s\S]*?(?=function bi\()/, MOBILE_SAFE_IMAGE_DECODER);
     js = js.replace(/async function xi\(e\)\{[\s\S]*?(?=async function Si\()/, ROBUST_PAGE_ALIGNER);
     js = js.replace(/async function Si\(e,t\)\{[\s\S]*?(?=function Ci\()/, NEW_ID_SCANNER);
     js = js.replace(/function Oi\(e,t,n\)\{[\s\S]*?(?=async function ki\()/, COLOR_CHECKBOX_SCANNER + SAFE_EXTRA_OCR);
     js = js.replace(/async function ki\(e,t,n,r\)\{[\s\S]*?(?=var Ai=)/, NO_AUTO_EXTRAS_ANALYZE);
     js = js.replace(SAVE_OLD, SAVE_NEW);
-    if (js === original || !js.includes('function bi(e)') || !js.includes('2048/n') || !js.includes('VPtemplateBands') || !js.includes('VPextraOCR') || !js.includes('Math.max(n,10)') || !js.includes('n.push({id:e.key') || !js.includes('start:a.value,end:o.value')) {
+    if (js === original || !js.includes('function yi(e)') || !js.includes('function bi(e)') || !js.includes('VPtemplateBands') || !js.includes('VPextraOCR') || !js.includes('Math.max(n,10)') || !js.includes('n.push({id:e.key') || !js.includes('start:a.value,end:o.value')) {
       return res.status(500).send('GestPro scanner patch markers not found in upstream bundle.');
     }
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
-    res.setHeader('X-GestPro-Scanner', 'v17-perspective-fix');
+    res.setHeader('X-GestPro-Scanner', 'v18-full-quality');
     return res.status(200).send(js);
   } catch (error) {
     return res.status(500).send(`GestPro scanner proxy error: ${error?.message || error}`);
