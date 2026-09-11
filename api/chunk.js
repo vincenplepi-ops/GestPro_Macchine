@@ -47,6 +47,10 @@ const STAGE_ORDER_OLD = "t(`produzione`).end||t(`collaudo`).start?`In collaudo`:
 const STAGE_ORDER_NEW = "t(`produzione`).end||t(`collaudo`).start?`In collaudo`:(t(`basamento_piazzato`).start||t(`basamento_piazzato`).end)&&!t(`produzione`).start?`Basamento piazzato`:t(`produzione`).start||e.slot?`In produzione`:`Pianificata`";
 const COLOR_ORDER_OLD = "t(`produzione`).end||t(`collaudo`).start?{color:`orange`,label:`In collaudo`}:t(`produzione`).start||n?{color:`yellow`,label:`Macchina al montaggio`}:t(`basamento_piazzato`).start||t(`basamento_piazzato`).end?{color:`red`,label:`Basamento piazzato`}:{color:`gray`,label:`NEXT SLOT`}";
 const COLOR_ORDER_NEW = "t(`produzione`).end||t(`collaudo`).start?{color:`orange`,label:`In collaudo`}:(t(`basamento_piazzato`).start||t(`basamento_piazzato`).end)&&!t(`produzione`).start?{color:`red`,label:`Basamento piazzato`}:t(`produzione`).start||n?{color:`yellow`,label:`Macchina al montaggio`}:{color:`gray`,label:`NEXT SLOT`}";
+const SYNC_OLD = "async function _r(e,t){let n=await fetch(`${sr}/rest/v1/machines?id=eq.${encodeURIComponent(t.id)}`,{method:`PATCH`,headers:{...ur(e.access_token),Prefer:`return=minimal`},body:JSON.stringify({id:t.id,data:t,updated_at:new Date().toISOString()})});if(!n.ok){let e=await n.json().catch(()=>({}));throw Error(`Aggiornamento non riuscito: ${e?.message||n.status}`)}}";
+const SYNC_NEW = "async function _r(e,t){let n=null;for(let r=0;r<3;r++){let i=new AbortController,a=setTimeout(()=>i.abort(),15e3);try{let r=await fetch(`${sr}/rest/v1/machines?id=eq.${encodeURIComponent(t.id)}&select=id,updated_at`,{method:`PATCH`,headers:{...ur(e.access_token),Prefer:`return=representation`},body:JSON.stringify({id:t.id,data:t,updated_at:new Date().toISOString()}),signal:i.signal}),a=await r.json().catch(()=>[]);if(r.ok&&Array.isArray(a)&&a.some(e=>String(e.id)===String(t.id)))return;if(r.status===401||r.status===403)throw Error(`Sessione scaduta. Accedi di nuovo e ripeti la sincronizzazione.`);n=Error(`Il server non ha confermato l'aggiornamento della macchina ${t.id}: ${a?.message||r.status}`)}catch(e){n=e instanceof Error?e:Error(String(e))}finally{clearTimeout(a)}if(r<2)await new Promise(e=>setTimeout(e,700*(r+1)))}throw n||Error(`Sincronizzazione non riuscita`) }";
+const SAVE_SESSION_OLD = "e&&!h&&await _r(e,f)";
+const SAVE_SESSION_NEW = "e&&!h&&await _r(await pr()||e,f)";
 
 module.exports = async function handler(req, res) {
   try {
@@ -62,7 +66,7 @@ module.exports = async function handler(req, res) {
     if (!containsScanner) {
       res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
       res.setHeader('Cache-Control', 'no-store, max-age=0');
-      res.setHeader('X-GestPro-Scanner', 'v13-template-aligned');
+      res.setHeader('X-GestPro-Scanner', 'v14-sync-verified');
       return res.status(200).send(js);
     }
     js = js.replace(/async function xi\(e\)\{[\s\S]*?(?=async function Si\()/, ROBUST_PAGE_ALIGNER);
@@ -73,12 +77,14 @@ module.exports = async function handler(req, res) {
     js = js.replace(HOME_FILTER_OLD, HOME_FILTER_NEW);
     js = js.replace(STAGE_ORDER_OLD, STAGE_ORDER_NEW);
     js = js.replace(COLOR_ORDER_OLD, COLOR_ORDER_NEW);
-    if (js === original || !js.includes('VPtemplateBands') || !js.includes('VPextraOCR') || !js.includes('Math.max(n,10)') || !js.includes('n.push({id:e.key') || !js.includes('start:a.value,end:o.value') || !js.includes('e.slot!=null&&String(e.slot).trim()') || !js.includes(')&&!t(`produzione`).start?{color:`red`')) {
+    js = js.replace(SYNC_OLD, SYNC_NEW);
+    js = js.replace(SAVE_SESSION_OLD, SAVE_SESSION_NEW);
+    if (js === original || !js.includes('VPtemplateBands') || !js.includes('VPextraOCR') || !js.includes('Math.max(n,10)') || !js.includes('n.push({id:e.key') || !js.includes('start:a.value,end:o.value') || !js.includes('e.slot!=null&&String(e.slot).trim()') || !js.includes(')&&!t(`produzione`).start?{color:`red`') || !js.includes('Prefer:`return=representation`') || !js.includes('await _r(await pr()||e,f)')) {
       return res.status(500).send('GestPro scanner patch markers not found in upstream bundle.');
     }
     res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, max-age=0');
-    res.setHeader('X-GestPro-Scanner', 'v13-template-aligned');
+    res.setHeader('X-GestPro-Scanner', 'v14-sync-verified');
     return res.status(200).send(js);
   } catch (error) {
     return res.status(500).send(`GestPro scanner proxy error: ${error?.message || error}`);
